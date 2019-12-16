@@ -1,12 +1,16 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-##################################################
+
+#
+# SPDX-License-Identifier: GPL-3.0
+#
 # GNU Radio Python Flow Graph
 # Title: OPS-SAT UHF demodulator/decoder
 # Author: Fischer Benjamin, Mladenov Tom
 # Description: UHF demodulator and decoder application for the ESA OPS-SAT mission
-# GNU Radio version: 3.7.13.5
-##################################################
+# GNU Radio version: 3.8.0.0
+
+from distutils.version import StrictVersion
 
 if __name__ == '__main__':
     import ctypes
@@ -16,26 +20,26 @@ if __name__ == '__main__':
             x11 = ctypes.cdll.LoadLibrary('libX11.so')
             x11.XInitThreads()
         except:
-            print "Warning: failed to XInitThreads()"
+            print("Warning: failed to XInitThreads()")
 
-from PyQt4 import Qt
+from PyQt5 import Qt
+from gnuradio import qtgui
+from gnuradio.filter import firdes
+import sip
 from gnuradio import analog
+import math
 from gnuradio import blocks
 from gnuradio import digital
-from gnuradio import eng_notation
 from gnuradio import filter
 from gnuradio import gr
-from gnuradio import qtgui
-from gnuradio import zeromq
-from gnuradio.eng_option import eng_option
-from gnuradio.filter import firdes
-from optparse import OptionParser
-import math
-import satellites
-import sip
 import sys
+import signal
+from argparse import ArgumentParser
+from gnuradio.eng_arg import eng_float, intx
+from gnuradio import eng_notation
+from gnuradio import zeromq
+import satellites
 from gnuradio import qtgui
-
 
 class os_demod_decode(gr.top_block, Qt.QWidget):
 
@@ -61,8 +65,14 @@ class os_demod_decode(gr.top_block, Qt.QWidget):
         self.top_layout.addLayout(self.top_grid_layout)
 
         self.settings = Qt.QSettings("GNU Radio", "os_demod_decode")
-        self.restoreGeometry(self.settings.value("geometry").toByteArray())
 
+        try:
+            if StrictVersion(Qt.qVersion()) < StrictVersion("5.0.0"):
+                self.restoreGeometry(self.settings.value("geometry").toByteArray())
+            else:
+                self.restoreGeometry(self.settings.value("geometry"))
+        except:
+            pass
 
         ##################################################
         # Variables
@@ -77,28 +87,25 @@ class os_demod_decode(gr.top_block, Qt.QWidget):
         ##################################################
         self.zeromq_sub_source_0 = zeromq.sub_source(gr.sizeof_gr_complex, 1, 'tcp://127.0.0.1:5555', 100, False, -1)
         self.zeromq_pub_sink_0 = zeromq.pub_sink(gr.sizeof_char, 1, 'tcp://127.0.0.1:38211', 100, False, -1)
+        self.satellites_submit_0 = satellites.submit('https://db.satnogs.org/api/telemetry/', 2223232, 'OZ3RF', 9.9762, 57.0116, '')
         self.satellites_strip_ax25_header_0 = satellites.strip_ax25_header()
         self.satellites_nrzi_decode_0 = satellites.nrzi_decode()
         self.satellites_hdlc_deframer_0_0 = satellites.hdlc_deframer(check_fcs=True, max_length=1000)
         self.satellites_decode_rs_0 = satellites.decode_rs(True, 0)
         self.satellites_check_address_0 = satellites.check_address('DP0OPS', "from")
         self.qtgui_waterfall_sink_x_0 = qtgui.waterfall_sink_c(
-        	512, #size
-        	firdes.WIN_HAMMING, #wintype
-        	0, #fc
-        	samp_rate, #bw
-        	"OPS-SAT UHF BEACON", #name
-                1 #number of inputs
+            512, #size
+            firdes.WIN_HAMMING, #wintype
+            0, #fc
+            samp_rate, #bw
+            "OPS-SAT UHF BEACON", #name
+            1 #number of inputs
         )
         self.qtgui_waterfall_sink_x_0.set_update_time(0.03)
         self.qtgui_waterfall_sink_x_0.enable_grid(False)
         self.qtgui_waterfall_sink_x_0.enable_axis_labels(True)
 
-        if not True:
-          self.qtgui_waterfall_sink_x_0.disable_legend()
 
-        if "complex" == "float" or "complex" == "msg_float":
-          self.qtgui_waterfall_sink_x_0.set_plot_pos_half(not True)
 
         labels = ['', '', '', '', '',
                   '', '', '', '', '']
@@ -106,7 +113,8 @@ class os_demod_decode(gr.top_block, Qt.QWidget):
                   0, 0, 0, 0, 0]
         alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
                   1.0, 1.0, 1.0, 1.0, 1.0]
-        for i in xrange(1):
+
+        for i in range(1):
             if len(labels[i]) == 0:
                 self.qtgui_waterfall_sink_x_0.set_line_label(i, "Data {0}".format(i))
             else:
@@ -119,12 +127,12 @@ class os_demod_decode(gr.top_block, Qt.QWidget):
         self._qtgui_waterfall_sink_x_0_win = sip.wrapinstance(self.qtgui_waterfall_sink_x_0.pyqwidget(), Qt.QWidget)
         self.top_grid_layout.addWidget(self._qtgui_waterfall_sink_x_0_win)
         self.qtgui_freq_sink_x_0 = qtgui.freq_sink_c(
-        	512, #size
-        	firdes.WIN_BLACKMAN_hARRIS, #wintype
-        	0, #fc
-        	samp_rate, #bw
-        	"", #name
-        	1 #number of inputs
+            512, #size
+            firdes.WIN_BLACKMAN_hARRIS, #wintype
+            0, #fc
+            samp_rate, #bw
+            "", #name
+            1
         )
         self.qtgui_freq_sink_x_0.set_update_time(0.10)
         self.qtgui_freq_sink_x_0.set_y_axis(-140, 10)
@@ -136,21 +144,18 @@ class os_demod_decode(gr.top_block, Qt.QWidget):
         self.qtgui_freq_sink_x_0.enable_axis_labels(True)
         self.qtgui_freq_sink_x_0.enable_control_panel(False)
 
-        if not True:
-          self.qtgui_freq_sink_x_0.disable_legend()
 
-        if "complex" == "float" or "complex" == "msg_float":
-          self.qtgui_freq_sink_x_0.set_plot_pos_half(not True)
 
         labels = ['', '', '', '', '',
-                  '', '', '', '', '']
+            '', '', '', '', '']
         widths = [1, 1, 1, 1, 1,
-                  1, 1, 1, 1, 1]
+            1, 1, 1, 1, 1]
         colors = ["blue", "red", "green", "black", "cyan",
-                  "magenta", "yellow", "dark red", "dark green", "dark blue"]
+            "magenta", "yellow", "dark red", "dark green", "dark blue"]
         alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
-                  1.0, 1.0, 1.0, 1.0, 1.0]
-        for i in xrange(1):
+            1.0, 1.0, 1.0, 1.0, 1.0]
+
+        for i in range(1):
             if len(labels[i]) == 0:
                 self.qtgui_freq_sink_x_0.set_line_label(i, "Data {0}".format(i))
             else:
@@ -161,7 +166,7 @@ class os_demod_decode(gr.top_block, Qt.QWidget):
 
         self._qtgui_freq_sink_x_0_win = sip.wrapinstance(self.qtgui_freq_sink_x_0.pyqwidget(), Qt.QWidget)
         self.top_grid_layout.addWidget(self._qtgui_freq_sink_x_0_win)
-        self.fir_filter_xxx_0 = filter.fir_filter_fff(1, (gaussian_taps))
+        self.fir_filter_xxx_0 = filter.fir_filter_fff(1, gaussian_taps)
         self.fir_filter_xxx_0.declare_sample_delay(0)
         self.digital_descrambler_bb_0_0 = digital.descrambler_bb(0x21, 0, 16)
         self.digital_clock_recovery_mm_xx_0 = digital.clock_recovery_mm_ff((samp_rate / baud_rate)*(1+0.0), 0.25*gain_mu*gain_mu, 0.5, gain_mu, 0.005)
@@ -182,6 +187,7 @@ class os_demod_decode(gr.top_block, Qt.QWidget):
         ##################################################
         self.msg_connect((self.blocks_tagged_stream_to_pdu_0_0_0_0_0, 'pdus'), (self.satellites_decode_rs_0, 'in'))
         self.msg_connect((self.satellites_check_address_0, 'ok'), (self.satellites_strip_ax25_header_0, 'in'))
+        self.msg_connect((self.satellites_check_address_0, 'ok'), (self.satellites_submit_0, 'in'))
         self.msg_connect((self.satellites_decode_rs_0, 'out'), (self.blocks_message_debug_0, 'print_pdu'))
         self.msg_connect((self.satellites_decode_rs_0, 'out'), (self.blocks_pdu_to_tagged_stream_1, 'pdus'))
         self.msg_connect((self.satellites_hdlc_deframer_0_0, 'out'), (self.satellites_check_address_0, 'in'))
@@ -212,10 +218,10 @@ class os_demod_decode(gr.top_block, Qt.QWidget):
     def set_samp_rate(self, samp_rate):
         self.samp_rate = samp_rate
         self.set_gaussian_taps(firdes.gaussian (1.5, 2* (self.samp_rate / self.baud_rate) , 0.5, 12))
-        self.qtgui_waterfall_sink_x_0.set_frequency_range(0, self.samp_rate)
-        self.qtgui_freq_sink_x_0.set_frequency_range(0, self.samp_rate)
-        self.digital_clock_recovery_mm_xx_0.set_omega((self.samp_rate / self.baud_rate)*(1+0.0))
         self.analog_quadrature_demod_cf_0.set_gain(2 * (self.samp_rate / self.baud_rate) /(math.pi))
+        self.digital_clock_recovery_mm_xx_0.set_omega((self.samp_rate / self.baud_rate)*(1+0.0))
+        self.qtgui_freq_sink_x_0.set_frequency_range(0, self.samp_rate)
+        self.qtgui_waterfall_sink_x_0.set_frequency_range(0, self.samp_rate)
 
     def get_baud_rate(self):
         return self.baud_rate
@@ -223,15 +229,15 @@ class os_demod_decode(gr.top_block, Qt.QWidget):
     def set_baud_rate(self, baud_rate):
         self.baud_rate = baud_rate
         self.set_gaussian_taps(firdes.gaussian (1.5, 2* (self.samp_rate / self.baud_rate) , 0.5, 12))
-        self.digital_clock_recovery_mm_xx_0.set_omega((self.samp_rate / self.baud_rate)*(1+0.0))
         self.analog_quadrature_demod_cf_0.set_gain(2 * (self.samp_rate / self.baud_rate) /(math.pi))
+        self.digital_clock_recovery_mm_xx_0.set_omega((self.samp_rate / self.baud_rate)*(1+0.0))
 
     def get_gaussian_taps(self):
         return self.gaussian_taps
 
     def set_gaussian_taps(self, gaussian_taps):
         self.gaussian_taps = gaussian_taps
-        self.fir_filter_xxx_0.set_taps((self.gaussian_taps))
+        self.fir_filter_xxx_0.set_taps(self.gaussian_taps)
 
     def get_gain_mu(self):
         return self.gain_mu
@@ -242,10 +248,10 @@ class os_demod_decode(gr.top_block, Qt.QWidget):
         self.digital_clock_recovery_mm_xx_0.set_gain_mu(self.gain_mu)
 
 
+
 def main(top_block_cls=os_demod_decode, options=None):
 
-    from distutils.version import StrictVersion
-    if StrictVersion(Qt.qVersion()) >= StrictVersion("4.5.0"):
+    if StrictVersion("4.5.0") <= StrictVersion(Qt.qVersion()) < StrictVersion("5.0.0"):
         style = gr.prefs().get_string('qtgui', 'style', 'raster')
         Qt.QApplication.setGraphicsSystem(style)
     qapp = Qt.QApplication(sys.argv)
@@ -254,10 +260,20 @@ def main(top_block_cls=os_demod_decode, options=None):
     tb.start()
     tb.show()
 
+    def sig_handler(sig=None, frame=None):
+        Qt.QApplication.quit()
+
+    signal.signal(signal.SIGINT, sig_handler)
+    signal.signal(signal.SIGTERM, sig_handler)
+
+    timer = Qt.QTimer()
+    timer.start(500)
+    timer.timeout.connect(lambda: None)
+
     def quitting():
         tb.stop()
         tb.wait()
-    qapp.connect(qapp, Qt.SIGNAL("aboutToQuit()"), quitting)
+    qapp.aboutToQuit.connect(quitting)
     qapp.exec_()
 
 
