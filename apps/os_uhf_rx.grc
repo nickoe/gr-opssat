@@ -93,7 +93,7 @@ blocks:
   id: variable
   parameters:
     comment: ''
-    value: 250e3
+    value: 250e3*8
   states:
     bus_sink: false
     bus_source: false
@@ -256,7 +256,7 @@ blocks:
     alias: ''
     center_freq: -freq_tuned
     comment: ''
-    decim: '1'
+    decim: '8'
     maxoutbuf: '0'
     minoutbuf: '0'
     samp_rate: samp_rate

@@ -80,7 +80,7 @@ class os_uhf_rx(gr.top_block, Qt.QWidget):
         ##################################################
         self.signal_freq = signal_freq = 437.2e6
         self.true_freq = true_freq = signal_freq
-        self.samp_rate = samp_rate = 250e3
+        self.samp_rate = samp_rate = 250e3*8
         self.offset_freq = offset_freq = -40e3
         self.doppler_freq = doppler_freq = true_freq - signal_freq
         self.variable_low_pass_filter_taps_0 = variable_low_pass_filter_taps_0 = firdes.low_pass(1.0, samp_rate, 25000,1000, firdes.WIN_HAMMING, 6.76)
@@ -95,7 +95,7 @@ class os_uhf_rx(gr.top_block, Qt.QWidget):
         self._Squelch_win = RangeWidget(self._Squelch_range, self.set_Squelch, 'Squelch', "counter_slider", float)
         self.top_grid_layout.addWidget(self._Squelch_win)
         self.zeromq_pub_sink_0 = zeromq.pub_sink(gr.sizeof_gr_complex, 1, 'tcp://127.0.0.1:5555', 100, False, -1)
-        self.satnogs_tcp_rigctl_msg_source_0 = satnogs.tcp_rigctl_msg_source('127.0.0.1', 4532, False, 100, 1500)
+        self.satnogs_tcp_rigctl_msg_source_0 = satnogs.tcp_rigctl_msg_source('127.0.0.1', 4532, False, 1000, 1500)
         self.satnogs_coarse_doppler_correction_cc_0 = satnogs.coarse_doppler_correction_cc(true_freq, samp_rate)
         self.rtlsdr_source_0 = osmosdr.source(
             args="numchan=" + str(1) + " " + ''
@@ -187,7 +187,7 @@ class os_uhf_rx(gr.top_block, Qt.QWidget):
 
         self._qtgui_freq_sink_x_0_win = sip.wrapinstance(self.qtgui_freq_sink_x_0.pyqwidget(), Qt.QWidget)
         self.top_grid_layout.addWidget(self._qtgui_freq_sink_x_0_win)
-        self.freq_xlating_fir_filter_xxx_0 = filter.freq_xlating_fir_filter_ccc(1, variable_low_pass_filter_taps_0, -freq_tuned, samp_rate)
+        self.freq_xlating_fir_filter_xxx_0 = filter.freq_xlating_fir_filter_ccc(8, variable_low_pass_filter_taps_0, -freq_tuned, samp_rate)
         self.blocks_message_debug_0 = blocks.message_debug()
         self.analog_simple_squelch_cc_0 = analog.simple_squelch_cc(Squelch, 1)
         self.analog_sig_source_x_0 = analog.sig_source_c(samp_rate, analog.GR_COS_WAVE, -freq_tuned, 1, 0, 0)
